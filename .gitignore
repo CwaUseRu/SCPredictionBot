@@ -1,0 +1,9 @@
+*.env
+*.log
+.vscode/
+__pycache__
+*.db
+launch.json
+data/pics
+main_for_pc.py
+handlers_for_pc.py
