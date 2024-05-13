@@ -11,11 +11,12 @@ rt = Router()
 from dotenv import load_dotenv
 
 from app.soundcloud_scraper import mus_search
-from app.data_analysis import mus_analys
-
+from app.data_class import mus_class
 
 load_dotenv()
 
+
+max_length = 4096
 
 with open('data/phrases.json', 'r', encoding='utf-8') as file:
     fras = json.load(file)
@@ -55,7 +56,11 @@ async def mess_handler(message: types.Message):
     soundcloud_pattern = r'^https?:\/\/(?:www\.)?soundcloud\.com\/.*$'
     if re.match(soundcloud_pattern, url):
         playlist = str(await mus_search(url))
-        await mus_analys(playlist)
-        await bot.send_photo(chat_id=message.from_user.id, photo=FSInputFile('data/pics/plot1.png'), caption=fras["getplot1"])
+        chunks = [playlist[i:i+max_length] for i in range(0, len(playlist), max_length)]
+
+        for chunk in chunks:
+            await message.answer(chunk)
+        await mus_class(playlist)
+        # await bot.send_photo(chat_id=message.from_user.id, photo=FSInputFile('data/pics/plot1.png'), caption=fras["getplot1"])
     else:
         return await message.answer(fras["errorurl"])

@@ -10,17 +10,18 @@ async def mus_search(url):
 
     
     for track in playlist.tracks:
-        result.append({'name': track.title,
-                    'artist': track.artist,
-                    'album': track.label_name,
-                    'playcount': track.playback_count,
-                    'duration_ms': track.full_duration,
-                    'explicit': track.genre,
-                    'popularity': track.likes_count,
-                    'key': track.tag_list,
-                    'mode': track.reposts_count,
-                    'time_signature': track.created_at,
-                    'release_date': track.release_date})
+        result.append({
+                        'artist': track.artist,
+                        'duration': track.full_duration,
+                        'genre': track.genre,
+                        'label': track.label_name,
+                        'tags': track.tag_list,
+                        'title': track.title,
+                        'album': track.album,
+                        'date': track.created_at,
+                        'likes': track.likes_count,
+                        'stream': track.playback_count
+                    })
     return result
 
 if __name__ == '__main__':
