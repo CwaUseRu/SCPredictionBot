@@ -1,51 +1,77 @@
-import asyncio
 import pandas as pd
+import numpy as np
 from sklearn.preprocessing import LabelEncoder
-import numpy as np
-import seaborn as sns
-from sklearn.preprocessing import OneHotEncoder
-import plotly.express as px
-import matplotlib.pyplot as plt
-import numpy as np
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import classification_report, confusion_matrix
-from sklearn.model_selection import train_test_split
-from sklearn import tree
-from sklearn.neighbors import KNeighborsClassifier
-
-df = pd.read_csv('data\scdb.csv')
-
-le = LabelEncoder()
-
-async def mus_class(input):
-
-    data = pd.DataFrame.from_records(input)
+from gensim.models import Word2Vec
+from joblib import load
+import asyncio
 
 
-    X = df.iloc[:, 8:16]
-    y = df['artist']
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.01, random_state=42)
+model = load('data/model/logistic_regression_model.joblib')
+clf = load('data/model/decision_tree_model.joblib')
+neighbors = load('data/model/knn_model.joblib')
+le_artist = load('data/model/label_encoder_artist.joblib')
+scaler = load('data/model/scaler.joblib')
+imputer = load('data/model/imputer.joblib')
 
-    model = LogisticRegression(solver='sag', random_state=0)
+async def mus_class(playlist):
+    
+    df = pd.DataFrame.from_records(playlist)
 
-    clf = tree.DecisionTreeClassifier()
-    clf.fit(X_train, y_train)
-    s = clf.predict(X_train)
-    score = np.array([s, y_train])
-    score = score.T
-    print(pd.DataFrame(score).head(10))
+    # Преобразование данных
+    le = LabelEncoder()
+    df['genre'] = df['genre'].fillna('unknown')
+    df['genre'] = le.fit_transform(df['genre'])
+    df['date'] = pd.to_datetime(df['date']).dt.year
 
-    clf.score(X_train, y_train)
+    word2vec_model = Word2Vec(sentences=df['tags'].fillna('').apply(str).apply(str.split), vector_size=10, window=5, min_count=1, workers=4)
+    tag_vectors = []
+    for tags in df['tags'].fillna(''):
+        tags_list = tags.split()
+        vectors = [word2vec_model.wv[tag] for tag in tags_list if tag in word2vec_model.wv]
+        if vectors:
+            tag_vectors.append(pd.DataFrame(vectors).mean(axis=0))
+        else:
+            tag_vectors.append(pd.Series([0] * 10))
 
-    print(X_train)
 
-    neighbors = KNeighborsClassifier(n_neighbors=1)
-    neighbors.fit(X_train, y_train)
 
-    print(neighbors.score(X_train, y_train))
+    X_playlist = pd.DataFrame({
+        'genre': df['genre'],
+        'date': df['date'],
+        'likes': df['likes'],
+        'stream': df['stream']
+    })
+
+
+    for i in range(len(tag_vectors[0])):
+        X_playlist[f'tag_{i}'] = [tag[i] for tag in tag_vectors]
+
+    # Обработка пропущенных значений и масштабирование
+    X_playlist_imputed = imputer.transform(X_playlist)
+    X_playlist_scaled = scaler.transform(X_playlist_imputed)
+
+    # Предсказание вероятностей
+    probabilities_lr = model.predict_proba(X_playlist_scaled)
+    probabilities_tree = clf.predict_proba(X_playlist)
+    probabilities_knn = neighbors.predict_proba(X_playlist)
+
+    # Получение средних значений вероятностей для каждого артиста
+    mean_probabilities_lr = probabilities_lr.mean(axis=0)
+    mean_probabilities_dt = probabilities_tree.mean(axis=0)
+    mean_probabilities_knn = probabilities_knn.mean(axis=0)
+
+    # Выбор артиста с наивысшим средним значением вероятности
+    best_artist_lr = le_artist.inverse_transform([np.argmax(mean_probabilities_lr)])[0]
+    best_artist_dt = le_artist.inverse_transform([np.argmax(mean_probabilities_dt)])[0]
+    best_artist_knn = le_artist.inverse_transform([np.argmax(mean_probabilities_knn)])[0]
+
+
+    result = (f"Предсказанный автор логистической регрессией: {best_artist_lr} - с вероятностью: {mean_probabilities_lr[np.argmax(mean_probabilities_lr)]:.2f}\n" +
+          f"Автор предсказанный деревом принятия решений {best_artist_dt} - с вероятностью: {mean_probabilities_dt[np.argmax(mean_probabilities_dt)]:.2f}\n" +
+          f"KNN предсказал {best_artist_knn} - с вероятностью: {mean_probabilities_knn[np.argmax(mean_probabilities_knn)]:.2f}")
 
     
-    data.fit(X_train, y_train)
+    return result
 
 if __name__ == "__main__":
-    asyncio.run(mus_class('https://soundcloud.com/user-818400639-218240550/sets/zzgcthqyvuhe?si=bfbda8427ad8474ebad3fad2379462b1&utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing'))
+    asyncio.run(mus_class(None))

@@ -55,12 +55,8 @@ async def mess_handler(message: types.Message):
     url = str(message.text)
     soundcloud_pattern = r'^https?:\/\/(?:www\.)?soundcloud\.com\/.*$'
     if re.match(soundcloud_pattern, url):
-        playlist = str(await mus_search(url))
-        chunks = [playlist[i:i+max_length] for i in range(0, len(playlist), max_length)]
-
-        for chunk in chunks:
-            await message.answer(chunk)
-        await mus_class(playlist)
-        # await bot.send_photo(chat_id=message.from_user.id, photo=FSInputFile('data/pics/plot1.png'), caption=fras["getplot1"])
+        playlist = await mus_search(url)
+        analys = await mus_class(playlist)
+        await message.answer(analys)
     else:
         return await message.answer(fras["errorurl"])
