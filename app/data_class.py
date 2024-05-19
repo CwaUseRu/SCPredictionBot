@@ -66,9 +66,10 @@ async def mus_class(playlist):
     best_artist_knn = le_artist.inverse_transform([np.argmax(mean_probabilities_knn)])[0]
 
 
-    result = (f"Предсказанный автор логистической регрессией: {best_artist_lr} - с вероятностью: {mean_probabilities_lr[np.argmax(mean_probabilities_lr)]:.2f}\n" +
-          f"Автор предсказанный деревом принятия решений {best_artist_dt} - с вероятностью: {mean_probabilities_dt[np.argmax(mean_probabilities_dt)]:.2f}\n" +
-          f"KNN предсказал {best_artist_knn} - с вероятностью: {mean_probabilities_knn[np.argmax(mean_probabilities_knn)]:.2f}")
+    result = ("Предсказанные авторы методами: \n"
+            f"Логистической регрессией: {best_artist_lr} - с вероятностью: {mean_probabilities_lr[np.argmax(mean_probabilities_lr)]:.2f}\n" +
+            f"Деревом принятия решений: {best_artist_dt} - с вероятностью: {mean_probabilities_dt[np.argmax(mean_probabilities_dt)]:.2f}\n" +
+            f"k-ближайших соседей: {best_artist_knn} - с вероятностью: {mean_probabilities_knn[np.argmax(mean_probabilities_knn)]:.2f}")
 
     
     return result
