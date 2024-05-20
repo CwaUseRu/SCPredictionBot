@@ -2,6 +2,7 @@ import pandas as pd
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.model_selection import cross_val_score
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.impute import SimpleImputer
 from gensim.models import Word2Vec
@@ -30,7 +31,7 @@ for tags in df_filtered['tags'].fillna(''):
     if vectors:
         tag_vectors.append(pd.DataFrame(vectors).mean(axis=0))
     else:
-        tag_vectors.append(pd.Series([0] * 10))  # В случае отсутствия тегов добавляем нулевой вектор
+        tag_vectors.append(pd.Series([0] * 10))
 
 
 X = pd.DataFrame({
@@ -77,4 +78,14 @@ dump(le_artist, 'data/model/label_encoder_artist.joblib')
 dump(scaler, 'data/model/scaler.joblib')
 dump(imputer, 'data/model/imputer.joblib')
 
-print("Обучили, похвалили, сохранили")
+# Оценка модели логистической регрессии
+lr_scores = cross_val_score(model, X_scaled, y, cv=5)
+print("Средняя точность модели логистической регрессии:", lr_scores.mean())
+
+# Оценка модели дерева решений
+dt_scores = cross_val_score(clf, X, y, cv=5)
+print("Средняя точность модели дерева решений:", dt_scores.mean())
+
+# Оценка модели K-ближайших соседей
+knn_scores = cross_val_score(neighbors, X, y, cv=5)
+print("Средняя точность модели K-ближайших соседей:", knn_scores.mean())
